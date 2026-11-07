@@ -7,24 +7,14 @@ from pathlib import Path
 from loguru import logger
 from PySide6.QtWidgets import QApplication
 
+from app.log_config import configure_logging
 from app.paths import app_dir, ensure_app_cwd
 from app.ui.main_window import MainWindow
 from app.ui.theme import apply_app_theme
 
 
 def _configure_logging() -> None:
-    log_dir = app_dir() / "data" / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    logger.remove()
-    if sys.stderr is not None:
-        logger.add(sys.stderr, level="INFO")
-    logger.add(
-        str(log_dir / "app.log"),
-        rotation="1 MB",
-        retention=5,
-        level="DEBUG",
-        encoding="utf-8",
-    )
+    configure_logging(app_dir() / "data" / "logs")
 
 
 def main() -> int:

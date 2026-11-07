@@ -727,6 +727,8 @@ graph TD
 | Read-only client | `DirectSqlClient.query` | prefix check |
 | Row cap | `fetchmany(max_rows)`, default 10,000 | hard |
 | Secrets | OS keychain via `app/config/keychain.py` | good |
+| Secrets in logs | `app/log_config.py`: `diagnose=False` on every sink, so tracebacks never print variable values | good |
+| Secrets in git | `.githooks/pre-commit` blocks key-shaped strings, the local `.env` key and secret-bearing files; GitHub push protection on the public repo | good |
 | No table data to LLM | by construction | strong |
 
 Both SQL gates are **prefix checks**, not parsers. For an untrusted database,
@@ -746,7 +748,13 @@ Carry these forward; they are real and currently unfixed.
 | 3 | `describe_table` interpolates the table name into SQL with an f-string. | `app/core/sql_client.py` |
 | 4 | Type hints say `SyncMcpClient` where a `DirectSqlClient` is actually passed. | `orchestrator.py`, `data_source_panel.py` |
 | 5 | `fill_chart_from_rows` calls `float(...)` unguarded — a non-numeric y-column raises `ValueError` mid-render. | `app/core/row_utils.py` |
-| 6 | The file log sink keeps loguru's default `diagnose=True`, so `logger.exception` tracebacks print local variables — including the Gemini request's `x-goog-api-key` header — into `data/logs/app.log`. Treat logs as secret until fixed (`diagnose=False` on the sink). | `app/main.py` (`_configure_logging`) |
+
+**Fixed:** the log sinks kept loguru's default `diagnose=True`, so every
+`logger.exception` traceback printed the values of local variables — including
+the Gemini request's `x-goog-api-key` header — into `data/logs/app.log`. Both
+sinks are now configured in `app/log_config.py` with `diagnose=False` (the stack
+is kept, values are not), covered by `tests/test_log_config.py`. Logs written by
+earlier builds may still contain a key.
 
 **Fixed:** saved analyses had no record of which database produced them, so
 clicking a suggested follow-up on a replayed item silently ran it against

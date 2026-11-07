@@ -1,0 +1,53 @@
+#!/bin/sh
+# Refuse commits that would publish an API key or a file that holds one.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Bypass (only if you are certain it is a false positive):   git commit --no-verify
+#
+# Checks the *staged* version of each added/changed file for:
+#   1. files that must never be committed (.env, logs, history DB, data context)
+#   2. key-shaped strings (Google/Gemini, GitHub, Anthropic, OpenAI, private keys)
+#   3. the literal GEMINI_API_KEY value from your local .env, whatever its shape
+# Matching values are never printed — only file names.
+
+status=0
+staged_list=$(mktemp)
+trap 'rm -f "$staged_list"' EXIT
+git diff --cached --name-only --diff-filter=ACMR > "$staged_list"
+[ -s "$staged_list" ] || exit 0
+
+# 1. Secret-bearing files (normally gitignored; this catches `git add -f`).
+blocked=$(grep -E '(^|/)\.env(\..+)?$|^data/logs/|\.log$|^data/[^/]*\.sqlite$|^data/context\.md$' "$staged_list" | grep -vE '(^|/)\.env\.example$')
+if [ -n "$blocked" ]; then
+    echo "pre-commit: these files can contain secrets and must not be committed:" >&2
+    echo "$blocked" | sed 's/^/    /' >&2
+    status=1
+fi
+
+# 2. Key-shaped strings in staged content.
+pattern='AIza[0-9A-Za-z_-]{35}|ghp_[0-9A-Za-z]{36}|github_pat_[0-9A-Za-z_]{40,}|sk-ant-[0-9A-Za-z_-]{20,}|sk-(proj-)?[0-9A-Za-z_-]{32,}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+hits=$(tr '\n' '\0' < "$staged_list" | xargs -0 git grep --cached -l -I -E "$pattern" -- 2>/dev/null)
+if [ -n "$hits" ]; then
+    echo "pre-commit: possible API key or private key in:" >&2
+    echo "$hits" | sed 's/^/    /' >&2
+    status=1
+fi
+
+# 3. Your own Gemini key, matched literally.
+if [ -f .env ]; then
+    key=$(sed -n 's/^[[:space:]]*GEMINI_API_KEY[[:space:]]*=[[:space:]]*//p' .env | tr -d "\r\"' ")
+    if [ ${#key} -ge 20 ]; then
+        own=$(tr '\n' '\0' < "$staged_list" | xargs -0 git grep --cached -l -F -e "$key" -- 2>/dev/null)
+        if [ -n "$own" ]; then
+            echo "pre-commit: your GEMINI_API_KEY from .env appears in:" >&2
+            echo "$own" | sed 's/^/    /' >&2
+            status=1
+        fi
+    fi
+fi
+
+if [ $status -ne 0 ]; then
+    echo "" >&2
+    echo "Commit blocked. Unstage with:  git restore --staged <file>" >&2
+fi
+exit $status

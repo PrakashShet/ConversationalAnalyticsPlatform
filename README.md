@@ -384,9 +384,10 @@ automated tests.
 | Answers are slow | Each question makes two Gemini calls; response time depends on the model and the API. |
 | Nothing happens after Connect | Check `data/logs/app.log`. |
 
-> **Do not share log files publicly.** An exception traceback in
-> `data/logs/app.log` can currently include your API key — see
-> [known issue 6](docs/ARCHITECTURE.md#14-known-issues).
+> **Sharing logs.** Current builds never write variable values into
+> `data/logs/app.log`, so your API key stays out of tracebacks. Logs written by
+> builds before November 2026 could contain it — delete those, or search them
+> for `AIza` before sharing.
 
 ---
 
@@ -406,6 +407,7 @@ docs/
   reports/          forecasting technical report series
 input_data/     drop CSVs here for load_data.bat (not committed)
 tests/          pytest suite for app/core and app/data
+.githooks/      pre-commit secret guard (enable with git config core.hooksPath .githooks)
 *.bat           setup / run / test / load_data / run_postgres / run_build / download_*
 ```
 
@@ -419,7 +421,19 @@ tests/          pytest suite for app/core and app/data
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening a PR:
+Issues and pull requests are welcome. Once per clone, turn on the secret guard:
+
+```bat
+git config core.hooksPath .githooks
+```
+
+It refuses any commit that contains an API key (Gemini/Google, GitHub,
+Anthropic, OpenAI), a private key, the `GEMINI_API_KEY` from your local `.env`,
+or a file that can hold secrets (`.env`, logs, the history database). It names
+the file, never the value. GitHub push protection is also enabled on this
+repository as a second line of defence.
+
+Before opening a PR:
 
 1. Run `test.bat` and make sure it passes.
 2. Keep `app/core` free of Qt imports — that separation is what makes the

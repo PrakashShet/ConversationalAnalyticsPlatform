@@ -295,7 +295,18 @@ Type hints across the codebase still say `SyncMcpClient` where a
 | 3 | `describe_table` f-string-interpolates the table name into SQL. | `core/sql_client.py` |
 | 4 | Misleading `SyncMcpClient` type hints. | `orchestrator.py`, `data_source_panel.py` |
 | 5 | `fill_chart_from_rows` calls `float(...)` unguarded — non-numeric y-column raises mid-render. | `core/row_utils.py` |
-| 6 | File log sink uses loguru's default `diagnose=True`; exception tracebacks dump locals, including the `x-goog-api-key` header, into `data/logs/app.log`. Fix: `diagnose=False`. | `main.py` `_configure_logging` |
+
+**Fixed (do not reintroduce):** loguru's default `diagnose=True` printed local
+variable values in tracebacks, which put the `x-goog-api-key` header into
+`data/logs/app.log`. Sinks now live in `app/log_config.py` with
+`diagnose=False`; `tests/test_log_config.py` fails if a secret reaches the log.
+Any new `logger.add(...)` must pass `diagnose=False`.
+
+**Commit guard:** `.githooks/pre-commit` (enable per clone with
+`git config core.hooksPath .githooks`) blocks key-shaped strings, the literal
+`.env` key, and `.env`/logs/history/context files. GitHub secret scanning and
+push protection are on for the public repo. Build fake keys at runtime in
+tests (`"AIza" + "Q" * 35`) — a literal would trip both guards.
 
 `gemini-3.5-flash` (the default) is a valid model id — verified 2026-11-07; an
 earlier note calling it invalid was wrong. The repo is public on GitHub under

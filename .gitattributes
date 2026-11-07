@@ -4,6 +4,7 @@
 # Windows batch files need CRLF; shell scripts need LF.
 *.bat text eol=crlf
 *.sh  text eol=lf
+.githooks/* text eol=lf
 
 # Binary assets
 *.png  binary
