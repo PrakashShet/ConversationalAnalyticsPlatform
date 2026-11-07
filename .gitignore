@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment & secrets
+.env
+
+# Qt
+*.qmlc
+*.jsc
+
+# App data
+data/*.sqlite
+data/*.db
+data/context.md
+data/logs/
+
+# PostgreSQL Docker volume (keep the folder, ignore its contents)
+data/pgdata/*
+!data/pgdata/.gitkeep
+
+# Raw CSV inputs (keep the folder, ignore the data)
+data/raw/*
+!data/raw/.gitkeep
+
+# Office temp files (docs/reports)
+~$*.docx
+~$*.xlsx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Docs build
+docs/tools/__pycache__/
+
+# Exported HTML reports
+/analysis.html
+data/exports/
+
+# Third-party sample datasets: download, don't redistribute (see input_data/README.md)
+input_data/*.csv
+
+# EMBA coursework deliverables: kept local, not published
+docs/reports/*.docx
